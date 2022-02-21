@@ -91,6 +91,8 @@ struct hid_device_ {
 	wchar_t *last_error_str;
 };
 
+int hid_get_raw_descriptor(hid_device *dev, u_int8_t *descriptor_buffer, int* buffer_size);
+
 static struct hid_api_version api_version = {
 	.major = HID_API_VERSION_MAJOR,
 	.minor = HID_API_VERSION_MINOR,
@@ -679,6 +681,12 @@ struct hid_device_info  HID_API_EXPORT *hid_enumerate(unsigned short vendor_id, 
 		raw_dev = udev_device_new_from_syspath(udev, sysfs_path);
 		dev_path = udev_device_get_devnode(raw_dev);
 
+		if (udev_device_get_is_initialized(raw_dev) != 1) {
+			/* udev has not initialized the device yet (which includes
+		    setting permissions on the device node) */
+			goto next;
+		}
+
 		hid_dev = udev_device_get_parent_with_subsystem_devtype(
 			raw_dev,
 			"hid",
@@ -785,6 +793,20 @@ struct hid_device_info  HID_API_EXPORT *hid_enumerate(unsigned short vendor_id, 
 					if (intf_dev) {
 						str = udev_device_get_sysattr_value(intf_dev, "bInterfaceNumber");
 						cur_dev->interface_number = (str)? strtol(str, NULL, 16): -1;
+						/* Open the device */
+					    hid_device *handle = hid_open_path(dev_path);
+						int plen=strlen(sysfs_path);
+						cur_dev->device_path=calloc(1, plen);
+						memcpy(cur_dev->device_path, sysfs_path, plen);
+						cur_dev->device_path_size=plen;
+
+					    if (handle != NULL) {
+					        // Get a copy of the raw descriptor
+     					    cur_dev->raw_descriptor = calloc(2048, 1);
+							cur_dev->descriptor_size=2028;
+						    int result = hid_get_raw_descriptor(handle, cur_dev->raw_descriptor, &cur_dev->descriptor_size);
+						    hid_close(handle);
+						}
 					}
 
 					break;
@@ -867,6 +889,8 @@ void  HID_API_EXPORT hid_free_enumeration(struct hid_device_info *devs)
 		free(d->serial_number);
 		free(d->manufacturer_string);
 		free(d->product_string);
+		free(d->raw_descriptor);
+		free(d->device_path);
 		free(d);
 		d = next;
 	}
@@ -964,6 +988,38 @@ hid_device * HID_API_EXPORT hid_open_path(const char *path)
 	}
 }
 
+int HID_API_EXPORT hid_get_raw_descriptor(hid_device *dev,
+		u_int8_t *descriptor_buffer, int* buffer_size) {
+	/* Get the report descriptor */
+	int res=0, desc_size = 0;
+	struct hidraw_report_descriptor rpt_desc;
+
+	memset(&rpt_desc, 0x0, sizeof(rpt_desc));
+
+	/* Get Report Descriptor Size */
+	res = ioctl(dev->device_handle, HIDIOCGRDESCSIZE, &desc_size);
+	if (res < 0)
+	{
+		perror("HIDIOCGRDESCSIZE");
+		return res;
+	}
+	/* Get Report Descriptor */
+	rpt_desc.size = desc_size;
+	res = ioctl(dev->device_handle, HIDIOCGRDESC, &rpt_desc);
+	if (res < 0) {
+		perror("HIDIOCGRDESC");
+		return res;
+	}
+	if(rpt_desc.size > *buffer_size)
+	{
+		perror("ENOBUFS");
+		return ENOBUFS;
+	}
+	memcpy(descriptor_buffer, rpt_desc.value, rpt_desc.size);
+	*buffer_size = rpt_desc.size;
+	return res;
+}
+
 
 int HID_API_EXPORT hid_write(hid_device *dev, const unsigned char *data, size_t length)
 {
@@ -1028,6 +1084,15 @@ int HID_API_EXPORT hid_read_timeout(hid_device *dev, unsigned char *data, size_t
 			bytes_read = 0;
 		else
 			register_device_error(dev, strerror(errno));
+	}
+
+	if (bytes_read > 0 &&
+		!dev->uses_numbered_reports &&
+		length > bytes_read+1) {
+		    /* Be consistent, return report number always, even when it's zero. */
+		    memmove(data+1, data, bytes_read);
+		    data[0]=0;
+		    bytes_read++;
 	}
 
 	return bytes_read;

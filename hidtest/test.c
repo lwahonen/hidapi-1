@@ -28,6 +28,44 @@
 	#include <unistd.h>
 #endif
 
+char* to_hex_string(uint8_t *buf, int size)
+{
+
+	/* Allocate twice the number of bytes in the "buf" array because each byte would
+ * be converted to two hex characters, also add an extra space for the terminating
+ * null byte.
+ * [size] is the size of the buf array */
+	char *output=(char*)calloc(1, (size * 3) + 1);
+
+	/* pointer to the first item (0 index) of the output array */
+	char *ptr = &output[0];
+
+	int i;
+
+	for (i = 0; i < size; i++)
+	{
+		/* "sprintf" converts each byte in the "buf" array into a 2 hex string
+     * characters appended with a null byte, for example 10 => "0A\0".
+     *
+     * This string would then be added to the output array starting from the
+     * position pointed at by "ptr". For example if "ptr" is pointing at the 0
+     * index then "0A\0" would be written as output[0] = '0', output[1] = 'A' and
+     * output[2] = '\0'.
+     *
+     * "sprintf" returns the number of chars in its output excluding the null
+     * byte, in our case this would be 2. So we move the "ptr" location two
+     * steps ahead so that the next hex string would be written at the new
+     * location, overriding the null byte from the previous hex string.
+     *
+     * We don't need to add a terminating null byte because it's been already 
+     * added for us from the last hex string. */
+		ptr += sprintf(ptr, "%02X:", buf[i]);
+	}
+	ptr[-1]='\0';
+	return output;
+}
+
+
 int main(int argc, char* argv[])
 {
 	(void)argc;
@@ -56,14 +94,18 @@ int main(int argc, char* argv[])
 	devs = hid_enumerate(0x0, 0x0);
 	cur_dev = devs;
 	while (cur_dev) {
+		char* hex_descriptor=to_hex_string(cur_dev->raw_descriptor, cur_dev->descriptor_size);
 		printf("Device Found\n  type: %04hx %04hx\n  path: %s\n  serial_number: %ls", cur_dev->vendor_id, cur_dev->product_id, cur_dev->path, cur_dev->serial_number);
 		printf("\n");
 		printf("  Manufacturer: %ls\n", cur_dev->manufacturer_string);
 		printf("  Product:      %ls\n", cur_dev->product_string);
 		printf("  Release:      %hx\n", cur_dev->release_number);
 		printf("  Interface:    %d\n",  cur_dev->interface_number);
+		printf("  Raw descriptor:      %s\n", hex_descriptor);
+		printf("  Sysfs path:      %s\n", cur_dev->device_path);
 		printf("  Usage (page): 0x%hx (0x%hx)\n", cur_dev->usage, cur_dev->usage_page);
 		printf("\n");
+		free(hex_descriptor);
 		cur_dev = cur_dev->next;
 	}
 	hid_free_enumeration(devs);

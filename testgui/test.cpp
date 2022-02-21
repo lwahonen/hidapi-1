@@ -110,6 +110,26 @@ FXDEFMAP(MainWindow) MainWindowMap [] = {
 	FXMAPFUNC(SEL_TIMEOUT, MainWindow::ID_MAC_TIMER, MainWindow::onMacTimeout ),
 };
 
+#include <sstream>
+#include <iomanip>
+
+std::string bytesToHex(uint8_t *data, const int datasize)
+{
+	std::stringstream ss;
+	bool  first=true;
+	char buffer[20];
+	for(int i=0;i<datasize;i++) {
+		if(!first)
+			ss << ", ";
+		first= false;
+		sprintf(buffer, "0x%02x", data[i]);
+		ss << buffer;
+	}
+	std::string s = ss.str();
+	return s;
+}
+
+
 FXIMPLEMENT(MainWindow, FXMainWindow, MainWindowMap, ARRAYNUMBER(MainWindowMap));
 
 MainWindow::MainWindow(FXApp *app)
@@ -297,6 +317,7 @@ MainWindow::onRescan(FXObject *sender, FXSelector sel, void *ptr)
 		s.format("%04hx:%04hx -", cur_dev->vendor_id, cur_dev->product_id);
 		s += FXString(" ") + cur_dev->manufacturer_string;
 		s += FXString(" ") + cur_dev->product_string;
+		s += FXString(" ") + bytesToHex(cur_dev->raw_descriptor, cur_dev->descriptor_size).c_str();
 		usage_str.format(" (usage: %04hx:%04hx) ", cur_dev->usage_page, cur_dev->usage);
 		s += usage_str;
 		FXListItem *li = new FXListItem(s, NULL, cur_dev);
