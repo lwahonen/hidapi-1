@@ -455,6 +455,14 @@ static struct hid_device_info *create_device_info_with_usage(IOHIDDeviceRef dev,
 		cur_dev->interface_number = -1;
 	}
 
+	CFDataRef cfprop = (CFDataRef)IOHIDDeviceGetProperty(dev, CFSTR(kIOHIDReportDescriptorKey));
+	if( cfprop != NULL) {
+        long len = CFDataGetLength(cfprop);
+        cur_dev->raw_descriptor = calloc(1, len + 1);
+        CFDataGetBytes(cfprop, CFRangeMake(0, len), cur_dev->raw_descriptor);
+        cur_dev->descriptor_size=len;
+    }
+
 	return cur_dev;
 }
 
@@ -594,6 +602,7 @@ void  HID_API_EXPORT hid_free_enumeration(struct hid_device_info *devs)
 		free(d->serial_number);
 		free(d->manufacturer_string);
 		free(d->product_string);
+        free(d->raw_descriptor);
 		free(d);
 		d = next;
 	}
