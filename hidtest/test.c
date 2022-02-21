@@ -28,7 +28,7 @@
 	#include <unistd.h>
 #endif
 
-char* to_hex_string(uint8_t *buf, int size)
+char* to_hex_string(u_int8_t *buf, int size)
 {
 
 	/* Allocate twice the number of bytes in the "buf" array because each byte would
