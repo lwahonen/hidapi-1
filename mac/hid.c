@@ -391,6 +391,7 @@ static struct hid_device_info *create_device_info_with_usage(IOHIDDeviceRef dev,
 	if (cur_dev == NULL) {
 		return NULL;
 	}
+    cur_dev->device_path=NULL;
 
 	dev_vid = get_vendor_id(dev);
 	dev_pid = get_product_id(dev);
@@ -425,6 +426,8 @@ static struct hid_device_info *create_device_info_with_usage(IOHIDDeviceRef dev,
 		/* for whatever reason, trying to keep it a non-NULL string */
 		cur_dev->path = strdup("");
 	}
+    cur_dev->device_path= strdup(cur_dev->path);
+    cur_dev->device_path_size= strlen(cur_dev->path);
 
 	/* Serial Number */
 	get_serial_number(dev, buf, BUF_LEN);
@@ -603,6 +606,7 @@ void  HID_API_EXPORT hid_free_enumeration(struct hid_device_info *devs)
 		free(d->manufacturer_string);
 		free(d->product_string);
         free(d->raw_descriptor);
+        free(d->device_path);
 		free(d);
 		d = next;
 	}
