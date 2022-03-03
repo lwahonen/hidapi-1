@@ -398,12 +398,13 @@ static struct hid_device_info *create_device_info_with_usage(IOHIDDeviceRef dev,
 
 	cur_dev->usage_page = usage_page;
 	cur_dev->usage = usage;
+    cur_dev->inputReportSize=get_int_property(dev, CFSTR(kIOHIDMaxInputReportSizeKey));
+    cur_dev->outputReportSize=get_int_property(dev, CFSTR(kIOHIDMaxOutputReportSizeKey));
 
 	/* Fill out the record */
 	cur_dev->next = NULL;
 
-	/* Fill in the path (as a unique ID of the service entry) */
-	cur_dev->path = NULL;
+	/* Fill in the path (as a unique ID of the service entry) */	cur_dev->path = NULL;
 	iokit_dev = IOHIDDeviceGetService(dev);
 	if (iokit_dev != MACH_PORT_NULL) {
 		res = IORegistryEntryGetRegistryEntryID(iokit_dev, &entry_id);

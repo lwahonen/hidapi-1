@@ -119,6 +119,9 @@ extern "C" {
 			char* raw_descriptor;
 			int device_path_size;
 			char* device_path;
+
+            int inputReportSize;
+            int outputReportSize;
 		};
 
 

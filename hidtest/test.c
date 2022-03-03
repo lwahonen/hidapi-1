@@ -35,7 +35,7 @@ char* to_hex_string(u_int8_t *buf, int size)
  * be converted to two hex characters, also add an extra space for the terminating
  * null byte.
  * [size] is the size of the buf array */
-	char *output=(char*)calloc(1, (size * 3) + 1);
+	char *output=(char*)calloc(1, (size * 8) + 1);
 
 	/* pointer to the first item (0 index) of the output array */
 	char *ptr = &output[0];
@@ -59,7 +59,7 @@ char* to_hex_string(u_int8_t *buf, int size)
      *
      * We don't need to add a terminating null byte because it's been already 
      * added for us from the last hex string. */
-		ptr += sprintf(ptr, "%02X:", buf[i]);
+		ptr += sprintf(ptr, "0x%02X ", buf[i]);
 	}
 	ptr[-1]='\0';
 	return output;
@@ -102,7 +102,9 @@ int main(int argc, char* argv[])
 		printf("  Release:      %hx\n", cur_dev->release_number);
 		printf("  Interface:    %d\n",  cur_dev->interface_number);
 		printf("  Raw descriptor:      %s\n", hex_descriptor);
-		printf("  Sysfs path:      %s\n", cur_dev->device_path);
+        printf("  Sysfs path:      %s\n", cur_dev->device_path);
+        printf("  Input report size:      %d\n", cur_dev->inputReportSize);
+        printf("  Output report size:      %d\n", cur_dev->outputReportSize);
 		printf("  Usage (page): 0x%hx (0x%hx)\n", cur_dev->usage, cur_dev->usage_page);
 		printf("\n");
 		free(hex_descriptor);
